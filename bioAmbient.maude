@@ -237,21 +237,21 @@ endm
 mod TEST is
   inc BA .
   eq context = null .
-     ***('EnterTest ::= [ enter 'c { 0 } . 'T1 | 'T2 ] | [ accept 'c {0} . 'T3 | 'T4] ;
-     'ExitTest ::= [ [ exit 'c { 0 } . 'T1 | 'T2 ] |  expel 'c {0} . 'T3 | 'T4] ;
-     'MergeTest ::= [ merge+ 'c { 0 } . 'T1 | 'T2 ] | [ merge- 'c {0} . 'T3 | 'T4 ] ;
-     'V4 ::= enter 'p {0} . 'P ;
-     's2sTest1 ::= [ [ s2s 'n{0} !{ 'm{0} } . 'V4 ] | [ s2s 'n{0} ?{ 'p } . 'V4 ] ] ;
-     
-     'c2pTest1 ::= p2c 'n{0} !{ 'm{0} } . 'V4 | [ c2p 'n{0} ?{ 'p } . 'V4 ] ;
-     'p2cTest1 ::= p2c 'n{0} ?{ 'p } . 'V4 | [ c2p 'n{0} !{ 'm{0} } . 'V4 ] ;
-     's2sTest2 ::= [ [ s2s 'n{0} !{ 'm{0} } . 0 ] | [ s2s 'n{0} ?{ 'p } . enter 'p {0} . 'P ] ] ;
-     
-     'c2pTest2 ::= p2c 'n{0} !{ 'm{0} } . 0 | [ c2p 'n{0} ?{ 'p } . enter 'p {0} . 'P ] ;
-     'p2cTest2 ::= p2c 'n{0} ?{ 'p } . enter 'p {0} . 'P | [ c2p 'n{0} !{ 'm{0} } . 0  ] ;
-     'Porin ::= accept 'cell1 {0} . 'Porin + expel 'cell2 {0} . 'Porin ;
-     'Mol ::= enter 'cell1 {0} . 'Mol + exit 'cell2 {0} . 'Mol ;
-     'System ::=  [ 'Porin ] | [ 'Mol ] . )***
+  rl [EnterTest] : 'EnterTest => [ enter 'c { 0 } . 'T1 | 'T2 ] | [ accept 'c {0} . 'T3 | 'T4] .
+  rl [ExitTest] : 'ExitTest => [ [ exit 'c { 0 } . 'T1 | 'T2 ] |  expel 'c {0} . 'T3 | 'T4] .
+  rl [MergeTest] : 'MergeTest => [ merge+ 'c { 0 } . 'T1 | 'T2 ] | [ merge- 'c {0} . 'T3 | 'T4 ] .
+  rl [V4] : 'V4 => enter 'p {0} . 'P .
+  rl [s2sTest1] : 's2sTest1 => [ [ s2s 'n{0} !{ 'm{0} } . 'V4 ] | [ s2s 'n{0} ?{ 'p } . 'V4 ] ] .
+
+  rl [c2pTest1] : 'c2pTest1 => p2c 'n{0} !{ 'm{0} } . 'V4 | [ c2p 'n{0} ?{ 'p } . 'V4 ] .
+  rl [p2cTest1] : 'p2cTest1 => p2c 'n{0} ?{ 'p } . 'V4 | [ c2p 'n{0} !{ 'm{0} } . 'V4 ] .
+  rl [s2sTest2] : 's2sTest2 => [ [ s2s 'n{0} !{ 'm{0} } . 0 ] | [ s2s 'n{0} ?{ 'p } . enter 'p {0} . 'P ] ] .
+
+  rl [c2pTest2] : 'c2pTest2 => p2c 'n{0} !{ 'm{0} } . 0 | [ c2p 'n{0} ?{ 'p } . enter 'p {0} . 'P ] .
+  rl [p2cTest2] : 'p2cTest2 => p2c 'n{0} ?{ 'p } . enter 'p {0} . 'P | [ c2p 'n{0} !{ 'm{0} } . 0  ] .
+  rl [Porin] : 'Porin => accept 'cell1 {0} . 'Porin + expel 'cell2 {0} . 'Porin .
+  rl [Mol] : 'Mol => enter 'cell1 {0} . 'Mol + exit 'cell2 {0} . 'Mol .
+  rl [System] : 'System =>  [ 'Porin ] | [ 'Mol ] .
 endm
 
 ***(red 'p definedIn null .
@@ -265,7 +265,6 @@ red def('p, 'false ::= [0] ; 'p ::= 0) .
 red def('p, 'false ::= [0] ; 'p ::= 0 ; 'Q ::= enter 'n{0} . 0 ) .
 red def('p, 'false ::= [0] ; 'Q ::= enter 'n{0} . 0 ) .)***
 
-***(
 frew [4] 'EnterTest .
 frew [4] 'ExitTest .
 frew [4] 'MergeTest .
@@ -275,7 +274,8 @@ frew [20] 'p2cTest1 .
 frew [20] 's2sTest2 .
 frew [20] 'c2pTest2 .
 frew [20] 'p2cTest2 .
-frew [10] 'System .)***
+frew [50] 'System .
+
 
 frew [1000] [ accept 'n {0} . 'T3 ] | [ new[ 'n ] enter 'n{0} . P:Process | new[ 'n ] s2s 'z{0} !{ 'n{0} } . s2s 'n{0} ?{ 'p } . enter 'p { 0 } . 'int | new[ 'n ] enter 'n{0} . P2:Process ] | [ new[ 'm ] s2s 'z{0} ?{ 'p } . s2s 'p{0} !{ 'm{0} } . accept 'm{0} . 'entered ] .
 frew [1] [ new[ 'p ] s2s 'm{0} ?{ 'p } . enter 'p{0} . 'P | new[ 'p ] s2s 'm{0} ?{ 'p } . enter 'p{0} . 'P ] .
