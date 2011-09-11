@@ -1,0 +1,297 @@
+***(NOTE : 
+1-controllare bene i casi particolari delle sostituzioni, cinni non è detto sia esportabile agli ambienti 
+	sull'articolo usano, ad esempio il multiple substitution che permette di andare a fare il lifting all'interno
+	degli ambienti...?
+2- le input e output sequences credevo fossero state aggiunte alla sintassi, invece mi sono reso conto che erano proprie dei MA
+	il corrispondente dei BA sono le azioni, controllare come puo' funzionare il comportamento .
+3- la congruenza "Renaming bound name" non viene specificata .
+4- si assume che gli identficatori dei canali di input sia diverso da quello delle new
+
+6- INSERIRE owise per i messaggi.
+7- IMPORTANTE i quid dei messaggi in input devono essere anch'essi definiti come name senno' si hanno situazioni particolari tipo
+8- chiedere per lo scoping dei messaggi, le variabili esterne fanno parte dello scope?
+)***
+
+***(fmod ATYPES is sort AType .  endfm)***
+
+fmod ACID is 
+  pr QID .
+  sort Name .
+  ***subsort Qid < Name .
+  op _`{_`} : Qid Nat -> Name [prec 1].
+endfm
+
+fmod PROCESS is
+  pr QID .
+  sorts ProcessConstant Process .
+  subsort Qid < ProcessConstant < Process .
+endfm
+***( We don't consider the multiple message behaviour )***
+
+fmod CAPABILITY is
+  pr ACID .
+  sort Capability .
+  ****subsorts Name < Capability .
+  op enter_ : Name -> Capability .
+  op accept_ : Name -> Capability .
+  op exit_ : Name -> Capability .
+  op expel_ : Name -> Capability .
+  op merge+_ : Name -> Capability .
+  op merge-_ : Name -> Capability .
+endfm
+
+fmod DIRECTION is
+  sort Direction .
+  op local : -> Direction .
+  op s2s   : -> Direction .
+  op p2c   : -> Direction .
+  op c2p   : -> Direction .
+endfm
+
+fmod ACTIONS is
+  pr ACID .
+  pr DIRECTION .
+  sorts Action Msg .
+  subsort Name < Msg .
+  op __!`{_`} : Direction Name Msg -> Action [prec 18] .
+  op __?`{_`} : Direction Name Qid -> Action [prec 18] .
+endfm
+
+fmod CINNI is
+  inc ACTIONS .
+  pr PROCESS .
+  inc CAPABILITY .
+  sorts Subst Comunication .
+  subsorts Action Capability < Comunication .
+
+  op `[_:=_`] : Qid Msg -> Subst .
+  op `[shiftup_`] : Qid -> Subst .
+  op `[lift__`] : Qid Subst -> Subst .
+
+  op __ : Subst Name -> Name .
+  op __ : Subst Comunication -> Comunication .
+  op __ : Subst Process -> Process .
+  
+  vars a b : Qid .
+  var n : Nat .
+  var M : Msg .
+  var S : Subst .
+  var P : Action .
+  var v v1 : Name .
+  var d : Direction .
+  ***substitution on Comunications *** 
+  eq  [ a := M ] a{0} = M .
+  eq  [ a := M ] a{s n} = a{n} .
+  ceq [ a := M ] b{n} = b{n} if a =/= b .
+  
+  ***general operations ***
+  eq  [shiftup a ] a{n} = a{s n} .
+  ceq [shiftup a ] b{n} = b{n} if a =/= b .
+  
+  eq  [lift a S ] a{0} = a{0} .
+  eq  [lift a S ] a{s n} = [ shiftup a ] S a{n} .
+  ceq [lift a S ] b{n} = [shiftup a] S b{n} if a =/= b .
+  
+  ***application on Capabilities ***
+  eq S enter v = enter ( S v ).
+  eq S accept v = accept (S v) .
+  eq S exit v = exit (S v) .
+  eq S expel v = expel (S v) .
+  eq S merge+ v = merge+ (S v) .
+  eq S merge- v = merge- (S v) .
+  eq S d v !{ v1 } = d (S v) !{ (S v1) } .
+  ***eq S d v ?{ v1 } = d (S v) ?{ (S v1) } .
+  
+endfm
+
+
+fmod BA-SINTAX is
+  inc CINNI .
+  ***subsort AProcess < Process .
+
+
+
+  op 0 : -> Process .
+  ***op aEps : -> Action .
+  ***op cEps : -> Capability .
+  op _._ : Capability Process -> Process [prec 18 gather(E E) frozen(2) ] .
+  op _._ : Action Process -> Process [prec  18 gather(E E) frozen(2) ] .
+  op _|_ : Process Process -> Process [assoc comm prec 30 id: 0] .
+  op !_ : Process -> Process [prec 20] .
+  op !__ : Nat Process -> Process [prec 20] . ***bounded bang***
+  op [_] : Process -> Process [prec 21] .
+  op _+_ : Process Process -> Process [comm prec 20 id: 0] .
+  op _+_ : Process Process -> Process [comm prec 20 id: 0 ] .
+  op new`[_`]_ : Qid Process -> Process [prec 19] .
+  
+  ***application of substitutions on processes ***
+  var S : Subst .
+  var a : Qid .
+  
+  vars CAP CAP1 : Capability .
+  vars ACT ACT1 : Action .
+  vars P P1 : Process .
+  var n : Nat .
+  vars N N1 : Qid .
+
+  var d : Direction .
+  var v v1 : Name .
+  
+  eq S 0 = 0 .
+
+  eq S ( [P] ) = [ S (P) ] .
+  ceq S ( P | P1 ) = ( S ( P ) ) | ( S ( P1 ) ) if P =/= 0 and P1 =/= 0 .
+  ***eq S ( A | A1 ) = ( S ( A ) ) | ( S ( A1 ) ) .
+  eq S ( CAP . P ) = ( S ( CAP ) ) . ( S ( P ) ) .
+  
+  eq S (! P ) = ! ( S ( P ) ) .
+  eq S (! n P ) = ! n ( S ( P ) ) .
+  ceq S ( P + P1 ) = S ( P ) + ( S ( P1 ) ) if P =/= 0 and P1 =/= 0 .
+  ceq S ( P + P1 ) = S ( P ) + ( S ( P1 ) ) if P1 =/= 0 and P =/= 0 .
+
+  eq S ( new[N]P ) = new[N]( [lift N S] P ) .
+  
+  eq S ( d v ?{ a } . P ) = d (S v) ?{ a } . ([lift a S] P).
+  eq S ( ACT . P ) = ( S ( ACT ) ) . ( S ( P ) ) [owise] .
+  eq S P = P [owise] .
+  
+  
+  ******************************************
+  ****     STRUCTURAL EQUIVALENCES      ****
+  ******************************************
+  
+  
+  eq [ 0 ] = 0 .
+  ***eq L [ 0 ] = 0 .
+  
+  eq new[ N ] 0 = 0 .
+  
+  ceq new[ N ] new[ N1 ] P  = new[ N1 ] new[ N ] P if string( N1 ) < string( N ) .
+  
+  ceq (( new[ N ] P ) | P1 ) = (new[N] (P | ( [shiftup N ] P1 ) ) ) if P1 =/= 0 and P =/= 0 .
+  
+  eq ( [ new[N] P] ) = ( new[N] ( [ P ] ) ).
+  
+  eq ! n 0 = 0 .
+
+  eq ! 0 = 0 .
+  
+endfm
+
+mod BA-SEMANTICS is 
+  inc BA-SINTAX .
+  var S : Subst .
+  vars CAP CAP1 : Process .
+  vars ACT ACT1 : Process .
+  vars P Q R U : Process .
+  ****vars A A1 : AProcess .
+  var i : Nat .
+  vars N N1 M : Qid .
+  vars n m : Name .
+  var p : Qid .
+  var msg : Msg .
+  
+  var D : Direction .
+  rl [BangA]     : ! P | P => ! P .
+  rl [BangC]	 : ! P => ! P | P .
+
+  rl [RedIn]     : [ CAP + enter n . P  | Q ] | [(CAP1 + accept n . R) | U ] => [ [ P | Q ] | R | U ] .
+  rl [RedOut]    : [ [(CAP + exit n . P ) | Q ] | (CAP1 + expel n . R) | U ] => [ P | Q ] | [ R | U ] .
+  rl [RedMerge]  : [(CAP + merge+ n . P ) | Q ] | [(CAP1 + merge- n . R) | U ] => [ P | Q | R | U ] .  
+  rl [RedPOut]   : (ACT + p2c n !{ msg } . P) | [(c2p n ?{ p } . Q + ACT1) | R ] => P | [ ([ p := msg ] Q ) | R ] .
+  rl [RedPIn]	 : [R | ACT + c2p n !{ msg } . P ] | (p2c n ?{ p } . Q + ACT1) => [R | P] | ([p := msg ] Q) .
+  rl [RedSib]	 : [R | ACT + s2s n !{ msg } . P ] | [ s2s n ?{ p } . Q + ACT1 | U ] => [ R | P ] | [ ([p := msg ] Q) | U ] .
+
+  rl [RedLocal]  : (ACT + local n !{ msg } . P ) | (local n ?{ p } . Q + ACT1 ) => P | ([  p := msg ] Q ) .
+  ***crl [RedRes]   : new[ N ] P => new[ N ] Q if P => Q .
+endm
+
+mod BA is
+  inc BA-SEMANTICS .
+  inc PROCESS .
+  pr TRUTH-VALUE .
+  sort Context .
+  subsort ProcessConstant < Context .
+  op null : -> Context .
+  op context : -> Context .
+  op not-defined : -> Process .
+  op _;_ : Context Context -> Context [ assoc comm id: null prec 42] .
+  op _::=_ : ProcessConstant Process -> Context [prec 40].
+  op _definedIn_ : Qid Context -> Bool [prec 43] .
+  op def : ProcessConstant Context -> Process .
+  
+  vars X X1 : Qid .
+  var P : Process .
+  var C : Context .
+  
+  eq X definedIn ( X ::= P ; C ) = true .
+  eq X definedIn C = false [owise] .
+  
+  eq def(X , ( X ::= P ; C ) ) = P .
+  eq def(X , C) = not-defined [owise] .
+  
+  crl X => P if ( X definedIn context ) /\ def( X, context) => P .
+  
+endm
+
+mod TEST is
+  inc BA .
+  eq context = null .
+     ***('EnterTest ::= [ enter 'c { 0 } . 'T1 | 'T2 ] | [ accept 'c {0} . 'T3 | 'T4] ;
+     'ExitTest ::= [ [ exit 'c { 0 } . 'T1 | 'T2 ] |  expel 'c {0} . 'T3 | 'T4] ;
+     'MergeTest ::= [ merge+ 'c { 0 } . 'T1 | 'T2 ] | [ merge- 'c {0} . 'T3 | 'T4 ] ;
+     'V4 ::= enter 'p {0} . 'P ;
+     's2sTest1 ::= [ [ s2s 'n{0} !{ 'm{0} } . 'V4 ] | [ s2s 'n{0} ?{ 'p } . 'V4 ] ] ;
+     
+     'c2pTest1 ::= p2c 'n{0} !{ 'm{0} } . 'V4 | [ c2p 'n{0} ?{ 'p } . 'V4 ] ;
+     'p2cTest1 ::= p2c 'n{0} ?{ 'p } . 'V4 | [ c2p 'n{0} !{ 'm{0} } . 'V4 ] ;
+     's2sTest2 ::= [ [ s2s 'n{0} !{ 'm{0} } . 0 ] | [ s2s 'n{0} ?{ 'p } . enter 'p {0} . 'P ] ] ;
+     
+     'c2pTest2 ::= p2c 'n{0} !{ 'm{0} } . 0 | [ c2p 'n{0} ?{ 'p } . enter 'p {0} . 'P ] ;
+     'p2cTest2 ::= p2c 'n{0} ?{ 'p } . enter 'p {0} . 'P | [ c2p 'n{0} !{ 'm{0} } . 0  ] ;
+     'Porin ::= accept 'cell1 {0} . 'Porin + expel 'cell2 {0} . 'Porin ;
+     'Mol ::= enter 'cell1 {0} . 'Mol + exit 'cell2 {0} . 'Mol ;
+     'System ::=  [ 'Porin ] | [ 'Mol ] . )***
+endm
+
+***(red 'p definedIn null .
+red 'p definedIn 'p ::= 0 .
+red 'p definedIn 'false ::= [0] ; 'p ::= 0 .
+red 'p definedIn 'false ::= [0] ; 'p ::= 0 ; 'Q ::= enter 'n{0} . 0 .
+red 'p definedIn 'false ::= [0] ; 'Q ::= enter 'n{0} . 0 .
+red def('p, null) .
+red def('p, 'p ::= 0) .
+red def('p, 'false ::= [0] ; 'p ::= 0) .
+red def('p, 'false ::= [0] ; 'p ::= 0 ; 'Q ::= enter 'n{0} . 0 ) .
+red def('p, 'false ::= [0] ; 'Q ::= enter 'n{0} . 0 ) .)***
+
+***(
+frew [4] 'EnterTest .
+frew [4] 'ExitTest .
+frew [4] 'MergeTest .
+frew [20] 's2sTest1 .
+frew [20] 'c2pTest1 .
+frew [20] 'p2cTest1 .
+frew [20] 's2sTest2 .
+frew [20] 'c2pTest2 .
+frew [20] 'p2cTest2 .
+frew [10] 'System .)***
+
+frew [1000] [ accept 'n {0} . 'T3 ] | [ new[ 'n ] enter 'n{0} . P:Process | new[ 'n ] s2s 'z{0} !{ 'n{0} } . s2s 'n{0} ?{ 'p } . enter 'p { 0 } . 'int | new[ 'n ] enter 'n{0} . P2:Process ] | [ new[ 'm ] s2s 'z{0} ?{ 'p } . s2s 'p{0} !{ 'm{0} } . accept 'm{0} . 'entered ] .
+frew [1] [ new[ 'p ] s2s 'm{0} ?{ 'p } . enter 'p{0} . 'P | new[ 'p ] s2s 'm{0} ?{ 'p } . enter 'p{0} . 'P ] .
+
+***red [ 'a := 'p{5} ] s2s 'a{0} ?{ 'a } . ( enter 'a { 1 } . ( 'a ) )  .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
